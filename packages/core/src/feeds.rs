@@ -1,4 +1,5 @@
-use crate::{prisma::feed::Data, types::CustomEntry};
+// use crate::{prisma::feed::Data, types::CustomEntry};
+use crate::types::CustomEntry;
 use chrono::{FixedOffset, Utc};
 use feed_rs::{
     model::Feed,
@@ -14,6 +15,17 @@ use serde::Serialize;
 use std::{sync::Arc, time::Duration};
 use thiserror::Error;
 use tokio::sync::Semaphore;
+
+// Temporary Data struct until prisma client is generated
+#[derive(Clone)]
+pub struct Data {
+    pub id: String,
+    pub title: String,
+    pub feed_url: String,
+    pub last_etag: Option<String>,
+    pub last_crawled: Option<chrono::DateTime<chrono::Utc>>,
+    pub last_crawl_hash: Option<String>,
+}
 
 pub struct FeedWrapper {
     pub original_feed: Feed,
@@ -61,10 +73,10 @@ pub async fn fetch_feeds(feeds: Vec<Data>) -> Vec<FeedWrapper> {
             let mut headers = HeaderMap::new();
 
             // Set If-None-Match header if last_etag is available
-            if let Some(etag) = feed.last_etag {
+            if let Some(etag) = &feed.last_etag {
                 headers.insert(
                     reqwest::header::IF_NONE_MATCH,
-                    HeaderValue::from_str(&etag).unwrap(),
+                    HeaderValue::from_str(etag).unwrap(),
                 );
             }
 

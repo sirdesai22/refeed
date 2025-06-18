@@ -99,7 +99,9 @@ export const useCheckSource = (
   const previewFeed = !clientFetchedFeed
     ? {
         title: feed_title,
-        favicon: favicon_url!,
+        favicon: favicon_url
+          ? `https://www.google.com/s2/favicons?domain=${new URL(toHttps(defaultLink)).hostname}&sz=128`
+          : `https://www.google.com/s2/favicons?domain=${new URL(toHttps(defaultLink)).hostname}&sz=128`,
         link: defaultLink,
         error: undefined,
       }

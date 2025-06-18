@@ -9,7 +9,6 @@ import useWebParams from "./useWebParams";
 
 export const useItemData = () => {
   const { sort, FeedType, folder, feedId, bookmarkFolder } = useWebParams();
-
   const {
     data: rawItems,
     fetchNextPage,

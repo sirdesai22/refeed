@@ -3,7 +3,7 @@ import { PassThrough } from "stream";
 import { S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import type { PrismaClient } from "@prisma/client";
-import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import Parser from "rss-parser";
 import { v4 as uuidv4 } from "uuid";
 
@@ -73,35 +73,46 @@ export const addFeed = async (
     /* TODO: Replace all icons with higher resolution ones and fetch directly from
      their site instead of google. Need to write a scraper for this */
 
-    const bucket = "icons";
+    // Check if S3 configuration is available
+    if (
+      !process.env.IMAGE_ACCOUNT_ID ||
+      !process.env.IMAGE_ACCESS_KEY_ID ||
+      !process.env.IMAGE_ACCESS_KEY_SECRET
+    ) {
+      console.warn("S3 configuration not available, skipping icon upload");
+      key = null;
+    } else {
+      const bucket = "icons";
 
-    key = Date.now() + uuidv4() + ".ico";
+      key = Date.now() + uuidv4() + ".ico";
 
-    const iconUrl = await getIcon(parsed?.link!);
-    const uploadStream = new PassThrough();
-    const imageStream = await resolveImage(iconUrl);
+      const iconUrl = await getIcon(parsed?.link!);
+      const uploadStream = new PassThrough();
+      const imageStream = await resolveImage(iconUrl);
 
-    imageStream.pipe(uploadStream);
+      imageStream.pipe(uploadStream);
 
-    const uploadParams = {
-      Bucket: bucket,
-      Key: path.basename(key),
-      Body: uploadStream,
-      ContentType: "image/x-icon",
-    };
+      const uploadParams = {
+        Bucket: bucket,
+        Key: path.basename(key),
+        Body: uploadStream,
+        ContentType: "image/x-icon",
+      };
 
-    const upload = new Upload({
-      client: S3,
-      params: uploadParams,
-    });
+      const upload = new Upload({
+        client: S3,
+        params: uploadParams,
+      });
 
-    await upload.done();
+      await upload.done();
+    }
   } catch (err) {
     console.log(err);
-    throw new Error("Issue with uploading Image");
+    console.warn("Failed to upload icon, continuing without icon");
+    key = null;
   }
 
-  const LogoUrl = process.env.ICON_BUCKET_URL! + "/" + key;
+  const LogoUrl = key ? process.env.ICON_BUCKET_URL! + "/" + key : "";
 
   try {
     const feed = await prisma.feed.create({
@@ -116,7 +127,7 @@ export const addFeed = async (
 
     return feed;
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err instanceof PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         // P2002 is just "Unique constraint failed" which is fine
       } else {

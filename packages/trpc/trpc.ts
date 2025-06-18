@@ -25,12 +25,22 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
   // browsers will have the session cookie set
   const token = opts.req.headers.authorization;
 
-  const user = token
-    ? await supabase.auth.getUser(token)
-    : await supabase.auth.getUser();
+  let user = null;
+
+  try {
+    const userResult = token
+      ? await supabase.auth.getUser(token)
+      : await supabase.auth.getUser();
+
+    user = userResult.data.user;
+  } catch (error) {
+    // If there's an error getting the user, we'll just set user to null
+    // This will result in a 401 UNAUTHORIZED error, which is the expected behavior
+    console.error("Error getting user from Supabase:", error);
+  }
 
   return createInnerTRPCContext({
-    user: user.data.user,
+    user,
   });
 };
 

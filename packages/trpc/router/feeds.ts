@@ -100,11 +100,11 @@ export const feedRouter = createTRPCRouter({
       }[];
     }[] = JSON.parse(order?.feed_order as string);
 
-    const feeds = query.map((feed) => {
+    const feeds = query.map((feed: any) => {
       const { items, ...rest } = feed;
 
       // Loop through the items and make sure it starts at the pagination_start_timestamp
-      const itemsAfterDate = items.filter((item) => {
+      const itemsAfterDate = items.filter((item: any) => {
         const feed_added = feed.users[0]?.pagination_start_timestamp;
         const item_added = item.created_at;
 
@@ -146,8 +146,8 @@ export const feedRouter = createTRPCRouter({
       });
 
       // Loop over the feeds add at the ones that belong to the folder
-      folder.children?.forEach((children) => {
-        const match = feeds.find((feed) => feed.id == children.feedId);
+      folder.children?.forEach((children: any) => {
+        const match = feeds.find((feed: any) => feed.id == children.feedId);
 
         if (match) {
           folderFeeds[x]?.children?.push({
@@ -424,13 +424,22 @@ export const feedRouter = createTRPCRouter({
         const BACKEND_URL =
           process.env.REFEED_BACKEND_URL ?? "http://0.0.0.0:4050";
 
-        await fetch(BACKEND_URL + "/refreshfeeds", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ feed_ids: [feed?.id] }),
-        });
+        try {
+          await fetch(BACKEND_URL + "/refreshfeeds", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ feed_ids: [feed?.id] }),
+          });
+        } catch (error) {
+          // If the backend service is not running, we'll just log the error
+          // but continue with the feed addition process
+          console.warn(
+            "Backend service not available, skipping feed refresh:",
+            error,
+          );
+        }
       }
 
       if (!feed) {
@@ -492,7 +501,7 @@ export const feedRouter = createTRPCRouter({
     }
 
     // Convert _count to amount
-    const feeds = query.map((feed) => {
+    const feeds = query.map((feed: any) => {
       const { _count, logo_url, ...rest } = feed;
       if (logo_url) {
         return { ...rest, amount: _count.items, logo_url: logo_url };
